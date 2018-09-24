@@ -5,20 +5,20 @@
 //arrays defining Waypoints
 double home[]={156*PI/180,-90*PI/180,126*PI/180,-124*PI/180,-90*PI/180,38*PI/180};
 
-double arr11[]={151*PI/180,-50*PI/180,103*PI/180,-143*PI/180,-90*PI/180,32*PI/180};
-double arr12[]={151*PI/180,-56*PI/180,102*PI/180,-136*PI/180,-90*PI/180,33*PI/180};
-double arr13[]={151*PI/180,-61*PI/180,99*PI/180,-129*PI/180,-90*PI/180,32*PI/180};
-double arr14[]={151*PI/180,-69*PI/180,92*PI/180,-114*PI/180,-90*PI/180,32*PI/180};
+double arr11[]={150.94*PI/180,-50.05*PI/180,104.00*PI/180,-145.17*PI/180,-88.44*PI/180,37.97*PI/180};
+double arr12[]={150.94*PI/180,-56.43*PI/180,103.73*PI/180,-137.68*PI/180,-88.41*PI/180,37.94*PI/180};
+double arr13[]={150.94*PI/180,-61.55*PI/180,101.60*PI/180,-130.43*PI/180,-88.38*PI/180,37.91*PI/180};
+double arr14[]={150.94*PI/180,-64.37*PI/180,99.740*PI/180,-125.77*PI/180,-88.37*PI/180,37.88*PI/180};
 
-double arr21[]={163*PI/180,-51*PI/180,106*PI/180,-144*PI/180,-90*PI/180,44*PI/180};
-double arr22[]={163*PI/180,-57*PI/180,105*PI/180,-137*PI/180,-90*PI/180,44*PI/180};
-double arr23[]={163*PI/180,-63*PI/180,102*PI/180,-129*PI/180,-90*PI/180,44*PI/180};
-double arr24[]={163*PI/180,-68*PI/180,97*PI/180,-119*PI/180,-90*PI/180,44*PI/180};
+double arr21[]={161.61*PI/180,-50.76*PI/180,106.92*PI/180,-146.78*PI/180,-88.55*PI/180,48.88*PI/180};
+double arr22[]={161.61*PI/180,-57.49*PI/180,106.54*PI/180,-139.66*PI/180,-88.51*PI/180,48.59*PI/180};
+double arr23[]={161.61*PI/180,-63.14*PI/180,104.28*PI/180,-131.76*PI/180,-88.49*PI/180,48.56*PI/180};
+double arr24[]={161.62*PI/180,-66.00*PI/180,102.45*PI/180,-127.07*PI/180,-88.48*PI/180,48.54*PI/180};
 
-double arr31[]={175*PI/180,-51*PI/180,103*PI/180,-142*PI/180,-90*PI/180,56*PI/180};
-double arr32[]={175*PI/180,-56*PI/180,102*PI/180,-135*PI/180,-90*PI/180,56*PI/180};
-double arr33[]={175*PI/180,-61*PI/180,99*PI/180,-128*PI/180,-90*PI/180,56*PI/180};
-double arr34[]={175*PI/180,-67*PI/180,95*PI/180,-118*PI/180,-90*PI/180,56*PI/180};
+double arr31[]={173.62*PI/180,-50.37*PI/180,105.36*PI/180,-145.84*PI/180,-88.69*PI/180,60.67*PI/180};
+double arr32[]={173.64*PI/180,-56.70*PI/180,104.25*PI/180,-138.38*PI/180,-88.66*PI/180,60.63*PI/180};
+double arr33[]={173.65*PI/180,-62.01*PI/180,102.03*PI/180,-130.87*PI/180,-88.64*PI/180,60.60*PI/180};
+double arr34[]={173.66*PI/180,-64.60*PI/180,100.33*PI/180,-126.57*PI/180,-88.63*PI/180,60.58*PI/180};
 
 // array to define final velocity of point to point moves.  For now slow down to zero once 
 // each point is reached
@@ -91,6 +91,7 @@ void io_callback(const ur_msgs::IOStates::ConstPtr& msg)
     {
         int error = 0;
         driver_msg.destination=dest;  // Set desired position to move home
+		driver_msg.duration=duration;		
 		pub_command.publish(driver_msg);  // publish command, but note that is possible that
 												  // the subscriber will not receive this message.
 		int spincount = 0;
@@ -122,17 +123,26 @@ void io_callback(const ur_msgs::IOStates::ConstPtr& msg)
 					)
     {
 		int start_height = heights[start_loc] - 1;
-		int end_height = heights[end_loc];        
+		int end_height = heights[end_loc];
+		int error = 0;        
 		ROS_INFO("MOVING FROM %d at height %d TO %d at height %d" , start_loc, start_height, end_loc, end_height);
 		move_arm(pub_command, loop_rate, driver_msg, Q[start_loc][3], duration);
         move_arm(pub_command, loop_rate, driver_msg, Q[start_loc][start_height], duration);
         //turn suction on
 		suction(srv_SetIO, srv, 1.0);
+		int err_count = 0;
 		while(!block_attached)
 		{
 			ros::spinOnce();
 			loop_rate.sleep();
-		}
+			err_count++;
+			if (err_count > 50){
+				error = 1;
+				suction(srv_SetIO, srv, 0.0);
+				ROS_ERROR("NO BLOCK FOUND");
+				ros::spin();
+			}
+		}		
 		move_arm(pub_command, loop_rate, driver_msg, Q[start_loc][3], duration);
 		move_arm(pub_command, loop_rate, driver_msg, Q[end_loc][3], duration);
         move_arm(pub_command, loop_rate, driver_msg, Q[end_loc][end_height], duration);
@@ -143,11 +153,11 @@ void io_callback(const ur_msgs::IOStates::ConstPtr& msg)
 			ros::spinOnce();
 			loop_rate.sleep();
 		}
+		move_arm(pub_command, loop_rate, driver_msg, Q[end_loc][3], duration);
 		//subtlety - picking up height is different than putting down height
 		heights[start_loc]--;	
 		heights[end_loc]++;
-        int error = 0;
-        return error;
+		return error;
     }
 
     void solve(ros::Publisher pub_command, ros::Rate loop_rate, ece470_ur3_driver::command driver_msg,
@@ -236,7 +246,7 @@ int main(int argc, char **argv)
 
 	while(!ros::ok()){};	//check if ros is ready for operation	
 
-	float duration = 1.0;
+	float duration = 0.5;
 
 	move_arm(pub_command, loop_rate, driver_msg, QH, duration);		
 
