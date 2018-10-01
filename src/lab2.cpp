@@ -64,7 +64,7 @@ bool block_attached = 0;
 void position_callback(const ece470_ur3_driver::positions::ConstPtr& msg)
 {
 	isReady=msg->isReady; // When isReady is True the robot arm has made it to its desired position
-						  // and is ready to be told to go to another point if desired.
+			      // and is ready to be told to go to another point if desired.
 	pending=msg->pending; // pending is the opposite of isReady, pending is true until a new position is reached
 //	ROS_INFO("Debug isRdy = %d, pending = %d",(int)isReady,(int)pending);
 }
@@ -87,13 +87,15 @@ void io_callback(const ur_msgs::IOStates::ConstPtr& msg)
 	}
 
 
-	int move_arm(ros::Publisher pub_command, ros::Rate loop_rate, ece470_ur3_driver::command driver_msg, std::vector<double> dest, float duration)
+	int move_arm(ros::Publisher pub_command, ros::Rate loop_rate,
+		     ece470_ur3_driver::command driver_msg,
+		     std::vector<double> dest, float duration)
     {
         int error = 0;
         driver_msg.destination=dest;  // Set desired position to move home
 		driver_msg.duration=duration;		
 		pub_command.publish(driver_msg);  // publish command, but note that is possible that
-												  // the subscriber will not receive this message.
+		// the subscriber will not receive this message.
 		int spincount = 0;
 		while (isReady) { // Waiting for isReady to be false meaning that the driver has the new command
 			ros::spinOnce();  // Allow other ROS functionallity to run
