@@ -38,6 +38,7 @@ int main(int argc, char **argv)
 		cout<<"command should be entered in Degrees with format: rosrun lab3pkg lab3node theta1 theta2 theta3 theta4 theta5 theta6"<<endl;
 		return 0;
 	}
+	cout << "arg 0: " << argv[0] << endl;
 	cout<<"theta1:"<<atof(argv[1])<<",theta2:"<<atof(argv[2])<<",theta3:"<<atof(argv[3])<<",theta4:"<<atof(argv[4])<<",theta5:"<<atof(argv[5])<<",theta6:"<<atof(argv[6])<<endl;
 	//~ float f = atof(sf); Function to turn string to float number.
 	//assign return value from lab_angles to destination

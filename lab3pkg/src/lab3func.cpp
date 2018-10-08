@@ -39,7 +39,7 @@ std::vector<double> lab_fk(float theta1, float theta2, float theta3, float theta
 			DH2HT(.213,0,-.093,theta3)*
 			DH2HT(0,-PI/2,.083,theta4)*
 			DH2HT(0,PI/2,.083,theta5)*
-			DH2HT(53.5,PI,.138,theta6)<<endl;
+			DH2HT(.055,PI,.158,theta6)<<endl;
 	
 	return_value[0]=theta1+PI;  // What the lab considers zero for Theta1 is 180 on the UR3 robot.
 	return_value[1]=theta2;
