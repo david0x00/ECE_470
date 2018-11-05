@@ -75,63 +75,7 @@ std::vector<double> lab_invk(float xWgrip, float yWgrip, float zWgrip, float yaw
 
 	theta4 = -PI/2 - theta3 - theta2;
 	theta5 = -PI/2;
-
-
-
-/*
-	xcen = xgrip - a6*cos(yaw);
-	ROS_INFO("xcen: %f", xcen);
-	ycen = ygrip - a6*sin(yaw);
-	ROS_INFO("ycen: %f", ycen);
-	zcen = zgrip;
-
-	l1 = sqrt(pow(xcen,2) +pow(ycen,2));
-	ROS_INFO("l1: %f", l1);
-	l2 = sqrt(pow(l1, 2) - pow(.110, 2));
-	ROS_INFO("l2: %f", l2);
-	theta1 = atan2(xcen, ycen) - atan(.110/l2);
-	ROS_INFO("theta1: %f", theta1);
-	theta6 = yaw - theta1;
- 
-	//l3 = sqrt(0.013778 - pow(2, .110));
-	//l3 = 0.001678;
-
-	// kevin attempt
-	l3=.083;
-	l4 = l2 - l3;
-	ROS_INFO("l4: %f", l4);
-
-	x3end = l4*cos(theta1);
-	y3end = l4*sin(theta1);
-	z3end = zcen + .158; //using measurement from last lab
-
 	
-	t2_star=atan((z3end-d1)/l4);
-	ROS_INFO("t2_star: %f", t2_star);
-	t3_star=acos((pow(a2,2)+pow(a3,2)-pow(l4,2))/(2*a2*a3));
-	t2_cross=acos((pow(a2,2)+pow(l4,2)-pow(a3,2))/(2*a2*l4));
-	ROS_INFO("t3_star_inside: %f", (pow(a2,2)+pow(a3,2)-pow(l4,2))/(2*a2*a3));
-	ROS_INFO("t2_cross: %f", t2_cross);
-	ROS_INFO("t2_cross_inside: %f", (pow(a2,2)+pow(l4,2)-pow(a3,2))/(2*a2*l4));
-
-
-	theta2= t2_cross+t2_star; // Default value Need to Change
-	theta3= PI-t3_star; // Default value Need to Change
-	theta4= -theta2-theta3-PI/2;  // Default value Need to Change
-	theta5=-PI/2;  // Default value Need to Change
-	
-	*/
-	//theta1 = 0;
-	// theta2 = -PI/2;
-	// theta3 = PI/2;
-	// theta4 = -PI/2;
-	// theta5 = -PI/2;
-	// theta6 = 0;
-
-
-
-
-
 	// View values
 	//use cout
 	cout<<"theta1: "<< theta1<<endl;
