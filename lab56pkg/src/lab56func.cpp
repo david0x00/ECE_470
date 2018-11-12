@@ -173,6 +173,18 @@ Mat ImageConverter::associateObjects(Mat bw_img)
 	int label[num_of_labels];
 	int *equiv[num_of_labels];
 
+	// noise cancelation
+	int object_size[num_of_labels];
+	int object_cutoff=500;
+	int object_cutoff_max=1500;
+
+	int objects_final[num_of_labels];
+
+	for (int i = 0; i < num_of_labels; i++) {
+		object_size[i] = 0;
+		objects_final[i] = 0;
+	}
+
 	for (int i = 0; i < num_of_labels; i++) {
 		equiv[i] = &label[i];
 	}
@@ -258,10 +270,27 @@ Mat ImageConverter::associateObjects(Mat bw_img)
 			pixel = pixellabel[i][j];
 			if (pixel >= foreground) {
 				pixellabel[i][j] = *equiv[pixel];
+				// noise reduction
+				object_size[pixellabel[i][j]]++;
 			}
 		}
 	}
 
+	int small_objects[num_of_labels];
+	int count_objects = 0;
+	for (int i=0; i<=num_of_labels; i++){
+		if (object_size[i]<=object_cutoff || object_size[i]>=object_cutoff_max){
+			small_objects[i]=1;
+		}
+		else{
+			small_objects[i]=0;
+			if (objects_final[count_objects] == 0) {
+				objects_final[count_objects] = i;
+				count_objects++;
+			}
+		}
+
+	}
 	//need to reduce number of small objects
 
 
@@ -279,6 +308,7 @@ Mat ImageConverter::associateObjects(Mat bw_img)
 	// 	}
 	// }
 
+
 	// assign UNIQUE color to each object
 	Mat associate_img = Mat::zeros( bw_img.size(), CV_8UC3 ); // function will return this image
 	Vec3b color;
@@ -286,90 +316,219 @@ Mat ImageConverter::associateObjects(Mat bw_img)
 	{
 		for(int col=0; col<width; col++)
 		{
-			pixel = pixellabel[row][col];
-			if (pixel == -1) {
-				red = 0;
-				green = 0;
-				blue = 0;
+			if (pixellabel[row][col] == background || small_objects[pixellabel[row][col]] == 1) {
+				red = 255;
+				green = 255;
+				blue = 255;
 			} else {
-				if (pixel < 255) 
-					red = pixel;
-				else 
-					red = 255;
-				blue = 0;
-				green = 0;
+				// red = pixellabel[row][col] % 10 * 25;
+				// blue = pixellabel[row][col] % 5 * 50;
+				// green = pixellabel[row][col] % 3 * 83;
+
+				if (pixellabel[row][col] == objects_final[0]) {
+					red    = 255; // you can change color of each objects here
+					green  = 0;
+					blue   = 0;
+				} else if (pixellabel[row][col] == objects_final[1]) {
+					red    = 0;
+					green  = 255;
+					blue   = 0;
+				} else if (pixellabel[row][col] == objects_final[2]) {
+					red    = 0;
+					green  = 0;
+					blue   = 255;
+				} else if (pixellabel[row][col] == objects_final[3]) {
+					red    = 255;
+					green  = 255;
+					blue   = 0;
+				} else if (pixellabel[row][col] == objects_final[4]) {
+					red    = 0;
+					green  = 255;
+					blue   = 255;
+				} else if (pixellabel[row][col] == objects_final[5]) {
+					red    = 255;
+					green  = 0;
+					blue   = 255;
+				} else if (pixellabel[row][col] == objects_final[6]) {
+					red    = 128;
+					green  = 255;
+					blue   = 0;
+				} else if (pixellabel[row][col] == objects_final[7]) {
+					red    = 0;
+					green  = 255;
+					blue   = 128;
+				} else if (pixellabel[row][col] == objects_final[8]) {
+					red    = 128;
+					green  = 128;
+					blue   = 128;
+				} else {
+					red    = 0;
+					green = 0;
+					blue   = 0;
+				}
 			}
+				
+			// 	switch ( pixellabel[row][col] )
+			// 	{
+					
+			// 		// case 0:
+			// 		// 	red    = 255; // you can change color of each objects here
+			// 		// 	green = 255;
+			// 		// 	blue   = 255;
+			// 		// 	break;
+			// 		case objects_final[0] :
+			// 			red    = 255; // you can change color of each objects here
+			// 			green  = 0;
+			// 			blue   = 0;
+			// 			break;
+			// 		case objects_final[1]:
+			// 			red    = 0;
+			// 			green  = 255;
+			// 			blue   = 0;
+			// 			break;
+			// 		// case 3:
+			// 		// 	red    = 0;
+			// 		// 	green  = 0;
+			// 		// 	blue   = 255;
+			// 		// 	break;
+			// 		// case 4:
+			// 		// 	red    = 255;
+			// 		// 	green  = 255;
+			// 		// 	blue   = 0;
+			// 		// 	break;
+			// 		// case 5:
+			// 		// 	red    = 255;
+			// 		// 	green  = 0;
+			// 		// 	blue   = 255;
+			// 		// 	break;
+			// 		// case 6:
+			// 		// 	red    = 0;
+			// 		// 	green  = 255;
+			// 		// 	blue   = 255;
+			// 		// 	break;
+	  //   //             case 7:
+	  //   //                 red    = 128;
+	  //   //                 green  = 128;
+	  //   //                 blue   = 0;
+	  //   //                 break;
+	  //   //             case 8:
+	  //   //                 red    = 128;
+	  //   //                 green  = 0;
+	  //   //                 blue   = 128;
+	  //   //                 break;
+	  //   //             case 9:
+	  //   //                 red    = 0;
+	  //   //                 green  = 128;
+	  //   //                 blue   = 128;
+	  //   //              	break;
+			// 		default:
+			// 			red    = 0;
+			// 			green = 0;
+			// 			blue   = 0;
+			// 			break;
+			// 	}			
+			// } 
+			// if (small_objects[pixellabel[row][col]] == 0 && pixellabel[row][col] >= foreground) {
+			// 	red = 255;
+			// 	green = 0;
+			// 	blue = 0;
+			// }
+		// 	pixel = pixellabel[row][col];
+		// 	if (pixel == -1) {
+		// 		red = 0;
+		// 		green = 0;
+		// 		blue = 0;
+		// 	} else {
+		// 		if (pixel < 255) 
+		// 			red = pixel;
+		// 		else 
+		// 			red = 255;
+		// 		blue = 0;
+		// 		green = 0;
+		// 	}
 			
 
-			color[0] = blue;
-			color[1] = green;
-			color[2] = red;
-			associate_img.at<Vec3b>(Point(col,row)) = color;
-
-			// switch (  pixellabel[row][col] )
-			// {
-				
-			// 	case 0:
-			// 		red    = 255; // you can change color of each objects here
-			// 		green = 255;
-			// 		blue   = 255;
-			// 		break;
-			// 	case 1:
-			// 		red    = 255; // you can change color of each objects here
-			// 		green  = 0;
-			// 		blue   = 0;
-			// 		break;
-			// 	case 2:
-			// 		red    = 0;
-			// 		green  = 255;
-			// 		blue   = 0;
-			// 		break;
-			// 	case 3:
-			// 		red    = 0;
-			// 		green  = 0;
-			// 		blue   = 255;
-			// 		break;
-			// 	case 4:
-			// 		red    = 255;
-			// 		green  = 255;
-			// 		blue   = 0;
-			// 		break;
-			// 	case 5:
-			// 		red    = 255;
-			// 		green  = 0;
-			// 		blue   = 255;
-			// 		break;
-			// 	case 6:
-			// 		red    = 0;
-			// 		green  = 255;
-			// 		blue   = 255;
-			// 		break;
-   //              case 7:
-   //                  red    = 128;
-   //                  green  = 128;
-   //                  blue   = 0;
-   //                  break;
-   //              case 8:
-   //                  red    = 128;
-   //                  green  = 0;
-   //                  blue   = 128;
-   //                  break;
-   //              case 9:
-   //                  red    = 0;
-   //                  green  = 128;
-   //                  blue   = 128;
-   //               	break;
-			// 	default:
-			// 		red    = 0;
-			// 		green = 0;
-			// 		blue   = 0;
-			// 		break;					
+		color[0] = blue;
+		color[1] = green;
+		color[2] = red;
+		associate_img.at<Vec3b>(Point(col,row)) = color;
+			// if (small_objects[pixellabel[row][col]] == 0 || pixellabel[row][col] >= foreground) {
+			// 	switch (  pixellabel[row][col] )
+			// 	{
+					
+			// 		// case 0:
+			// 		// 	red    = 255; // you can change color of each objects here
+			// 		// 	green = 255;
+			// 		// 	blue   = 255;
+			// 		// 	break;
+			// 		case 1:
+			// 			red    = 255; // you can change color of each objects here
+			// 			green  = 0;
+			// 			blue   = 0;
+			// 			break;
+			// 		case 2:
+			// 			red    = 0;
+			// 			green  = 255;
+			// 			blue   = 0;
+			// 			break;
+			// 		case 3:
+			// 			red    = 0;
+			// 			green  = 0;
+			// 			blue   = 255;
+			// 			break;
+			// 		case 4:
+			// 			red    = 255;
+			// 			green  = 255;
+			// 			blue   = 0;
+			// 			break;
+			// 		case 5:
+			// 			red    = 255;
+			// 			green  = 0;
+			// 			blue   = 255;
+			// 			break;
+			// 		case 6:
+			// 			red    = 0;
+			// 			green  = 255;
+			// 			blue   = 255;
+			// 			break;
+	  //               case 7:
+	  //                   red    = 128;
+	  //                   green  = 128;
+	  //                   blue   = 0;
+	  //                   break;
+	  //               case 8:
+	  //                   red    = 128;
+	  //                   green  = 0;
+	  //                   blue   = 128;
+	  //                   break;
+	  //               case 9:
+	  //                   red    = 0;
+	  //                   green  = 128;
+	  //                   blue   = 128;
+	  //                	break;
+			// 		default:
+			// 			red    = 0;
+			// 			green = 0;
+			// 			blue   = 0;
+			// 			break;					
+			// 	}
+			// } else {
+			// 	color[0]=255;
+			// 	color[1]=255;
+			// 	color[2]=255;
 			// }
 
-		// 	color[0] = blue;
-		// 	color[1] = green;
-		// 	color[2] = red;
-		// 	associate_img.at<Vec3b>(Point(col,row)) = color;
+			// if (small_objects[pixellabel[row][col]]){
+			// 	color[0]=255;
+			// 	color[1]=255;
+			// 	color[2]=255;
+			// }
+			// else{
+			 	color[0] = blue;
+			 	color[1] = green;
+			 	color[2] = red;
+			// }
+			associate_img.at<Vec3b>(Point(col,row)) = color;
 		}
 	}
 	
