@@ -277,37 +277,43 @@ Mat ImageConverter::associateObjects(Mat bw_img)
 	}
 
 	int small_objects[num_of_labels];
+	const int object_limit = 9;
+	//row = 0, col = 1
+	static int centroids[object_limit][2];
+	for (int i = 0; i < object_limit; i++) {
+
+		centroids[i][0] = 0;
+		centroids[i][1] = 0;
+	}
 	int count_objects = 0;
 	for (int i=0; i<=num_of_labels; i++){
 		if (object_size[i]<=object_cutoff || object_size[i]>=object_cutoff_max){
 			small_objects[i]=1;
 		}
 		else{
-			small_objects[i]=0;
-			if (objects_final[count_objects] == 0) {
+			if (count_objects < object_limit) {
+				small_objects[i]=0;
 				objects_final[count_objects] = i;
+			
+				for (int row = 0; row < height; row++) {
+					for (int col = 0; col < width; col++) {
+						if (pixellabel[row][col] == i) {
+							centroids[count_objects][0] += row;
+							centroids[count_objects][1] += col;
+						}
+					}
+				}
+				centroids[count_objects][0] /= object_size[i];
+				centroids[count_objects][1] /= object_size[i];
+				
 				count_objects++;
 			}
 		}
-
 	}
-	//need to reduce number of small objects
 
-
-	// num = 0;
-	// // creating a demo image of colored lines
-	// for(int row=0; row<height; row++)
-	// {
-	// 	for(int col=0; col<width; col++) 
-	// 	{
-	// 		pixellabel[row][col] = num;
-	// 	}
-	// 	num++;
-	// 	if (num == 10) {
-	// 		num = 0;
-	// 	}
-	// }
-
+	for (int i = 0; i < count_objects; i++) {
+		std::cout << "Object(" << i << "): y (row) = " << centroids[i][0] << ", x (col) = " << centroids[i][1] << std::endl;
+	}
 
 	// assign UNIQUE color to each object
 	Mat associate_img = Mat::zeros( bw_img.size(), CV_8UC3 ); // function will return this image
@@ -321,14 +327,11 @@ Mat ImageConverter::associateObjects(Mat bw_img)
 				green = 255;
 				blue = 255;
 			} else {
-				// red = pixellabel[row][col] % 10 * 25;
-				// blue = pixellabel[row][col] % 5 * 50;
-				// green = pixellabel[row][col] % 3 * 83;
 
 				if (pixellabel[row][col] == objects_final[0]) {
 					red    = 255; // you can change color of each objects here
 					green  = 0;
-					blue   = 0;
+					blue   = 0;	
 				} else if (pixellabel[row][col] == objects_final[1]) {
 					red    = 0;
 					green  = 255;
@@ -338,9 +341,9 @@ Mat ImageConverter::associateObjects(Mat bw_img)
 					green  = 0;
 					blue   = 255;
 				} else if (pixellabel[row][col] == objects_final[3]) {
-					red    = 255;
+					red    = 255; // you can change color of each objects here
 					green  = 255;
-					blue   = 0;
+					blue   = 0;	
 				} else if (pixellabel[row][col] == objects_final[4]) {
 					red    = 0;
 					green  = 255;
@@ -367,171 +370,32 @@ Mat ImageConverter::associateObjects(Mat bw_img)
 					blue   = 0;
 				}
 			}
-				
-			// 	switch ( pixellabel[row][col] )
-			// 	{
-					
-			// 		// case 0:
-			// 		// 	red    = 255; // you can change color of each objects here
-			// 		// 	green = 255;
-			// 		// 	blue   = 255;
-			// 		// 	break;
-			// 		case objects_final[0] :
-			// 			red    = 255; // you can change color of each objects here
-			// 			green  = 0;
-			// 			blue   = 0;
-			// 			break;
-			// 		case objects_final[1]:
-			// 			red    = 0;
-			// 			green  = 255;
-			// 			blue   = 0;
-			// 			break;
-			// 		// case 3:
-			// 		// 	red    = 0;
-			// 		// 	green  = 0;
-			// 		// 	blue   = 255;
-			// 		// 	break;
-			// 		// case 4:
-			// 		// 	red    = 255;
-			// 		// 	green  = 255;
-			// 		// 	blue   = 0;
-			// 		// 	break;
-			// 		// case 5:
-			// 		// 	red    = 255;
-			// 		// 	green  = 0;
-			// 		// 	blue   = 255;
-			// 		// 	break;
-			// 		// case 6:
-			// 		// 	red    = 0;
-			// 		// 	green  = 255;
-			// 		// 	blue   = 255;
-			// 		// 	break;
-	  //   //             case 7:
-	  //   //                 red    = 128;
-	  //   //                 green  = 128;
-	  //   //                 blue   = 0;
-	  //   //                 break;
-	  //   //             case 8:
-	  //   //                 red    = 128;
-	  //   //                 green  = 0;
-	  //   //                 blue   = 128;
-	  //   //                 break;
-	  //   //             case 9:
-	  //   //                 red    = 0;
-	  //   //                 green  = 128;
-	  //   //                 blue   = 128;
-	  //   //              	break;
-			// 		default:
-			// 			red    = 0;
-			// 			green = 0;
-			// 			blue   = 0;
-			// 			break;
-			// 	}			
-			// } 
-			// if (small_objects[pixellabel[row][col]] == 0 && pixellabel[row][col] >= foreground) {
-			// 	red = 255;
-			// 	green = 0;
-			// 	blue = 0;
-			// }
-		// 	pixel = pixellabel[row][col];
-		// 	if (pixel == -1) {
-		// 		red = 0;
-		// 		green = 0;
-		// 		blue = 0;
-		// 	} else {
-		// 		if (pixel < 255) 
-		// 			red = pixel;
-		// 		else 
-		// 			red = 255;
-		// 		blue = 0;
-		// 		green = 0;
-		// 	}
-			
 
-		color[0] = blue;
-		color[1] = green;
-		color[2] = red;
-		associate_img.at<Vec3b>(Point(col,row)) = color;
-			// if (small_objects[pixellabel[row][col]] == 0 || pixellabel[row][col] >= foreground) {
-			// 	switch (  pixellabel[row][col] )
-			// 	{
-					
-			// 		// case 0:
-			// 		// 	red    = 255; // you can change color of each objects here
-			// 		// 	green = 255;
-			// 		// 	blue   = 255;
-			// 		// 	break;
-			// 		case 1:
-			// 			red    = 255; // you can change color of each objects here
-			// 			green  = 0;
-			// 			blue   = 0;
-			// 			break;
-			// 		case 2:
-			// 			red    = 0;
-			// 			green  = 255;
-			// 			blue   = 0;
-			// 			break;
-			// 		case 3:
-			// 			red    = 0;
-			// 			green  = 0;
-			// 			blue   = 255;
-			// 			break;
-			// 		case 4:
-			// 			red    = 255;
-			// 			green  = 255;
-			// 			blue   = 0;
-			// 			break;
-			// 		case 5:
-			// 			red    = 255;
-			// 			green  = 0;
-			// 			blue   = 255;
-			// 			break;
-			// 		case 6:
-			// 			red    = 0;
-			// 			green  = 255;
-			// 			blue   = 255;
-			// 			break;
-	  //               case 7:
-	  //                   red    = 128;
-	  //                   green  = 128;
-	  //                   blue   = 0;
-	  //                   break;
-	  //               case 8:
-	  //                   red    = 128;
-	  //                   green  = 0;
-	  //                   blue   = 128;
-	  //                   break;
-	  //               case 9:
-	  //                   red    = 0;
-	  //                   green  = 128;
-	  //                   blue   = 128;
-	  //                	break;
-			// 		default:
-			// 			red    = 0;
-			// 			green = 0;
-			// 			blue   = 0;
-			// 			break;					
-			// 	}
-			// } else {
-			// 	color[0]=255;
-			// 	color[1]=255;
-			// 	color[2]=255;
-			// }
-
-			// if (small_objects[pixellabel[row][col]]){
-			// 	color[0]=255;
-			// 	color[1]=255;
-			// 	color[2]=255;
-			// }
-			// else{
-			 	color[0] = blue;
-			 	color[1] = green;
-			 	color[2] = red;
-			// }
+			color[0] = blue;
+			color[1] = green;
+			color[2] = red;
 			associate_img.at<Vec3b>(Point(col,row)) = color;
+
 		}
 	}
 	
+	int crosshair_dim = 5;
+	int cl, cr, rt, rb;
+	color[0] = 0;
+	color[1] = 0;
+	color[2] = 0;
+	for (int i = 0; i < count_objects; i++) {
+		for (int j = 0; j <= crosshair_dim; j++) {
+			cl = centroids[i][1] - j;
+			cr = centroids[i][1] + j;
+			rt = centroids[i][0] - j;
+			rb = centroids[i][0] + j;
+			associate_img.at<Vec3b>(Point(cl,centroids[i][0])) = color;
+			associate_img.at<Vec3b>(Point(cr,centroids[i][0])) = color;
+			associate_img.at<Vec3b>(Point(centroids[i][1],rt)) = color;
+			associate_img.at<Vec3b>(Point(centroids[i][1],rb)) = color;
+		}
+	}
 	return associate_img;
 }
 
@@ -582,3 +446,12 @@ void ImageConverter::onClick(int event,int x, int y, int flags, void* userdata)
 	}
 }
 
+// void camera_cal(int row, int col) {
+// 	const int height = 480; const int width = 640;
+// 	const int orig_r = height / 2;
+// 	const int orig_c = width / 2;
+
+// 	const double beta = 699.64;
+	
+
+// }
