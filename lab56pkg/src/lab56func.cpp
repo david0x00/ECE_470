@@ -16,6 +16,17 @@ bool rightclickdone = 1;
 * Functions in class:
 * **************************************************/	
 
+void suction(ros::ServiceClient srv_SetIO, ur_msgs::SetIO srv, float state) {
+  srv.request.fun = 1;
+  srv.request.pin = 0; // Digital Output 0
+  srv.request.state = state; //Set DO0 off
+  if (srv_SetIO.call(srv)) {
+    ROS_INFO("True: Switched Suction OFF");
+  } else {
+    ROS_INFO("False");
+  }
+}
+
 //constructor(don't modify) 
 ImageConverter::ImageConverter():it_(nh_)
 {
@@ -32,7 +43,7 @@ ImageConverter::ImageConverter():it_(nh_)
 	srv_SetIO = nh_.serviceClient<ur_msgs::SetIO>("ur_driver/set_io");
 
 
-    driver_msg.destination=lab_invk(-.3,-.3,0.2,-90);
+    driver_msg.destination=lab_invk(.043,-.437,0.152,-90);
 
 	//publish the point to the robot
     ros::Rate loop_rate(SPIN_RATE); // Initialize the rate to publish to ur3/command
@@ -311,9 +322,9 @@ Mat ImageConverter::associateObjects(Mat bw_img)
 		}
 	}
 
-	for (int i = 0; i < count_objects; i++) {
-		std::cout << "Object(" << i << "): y (row) = " << centroids[i][0] << ", x (col) = " << centroids[i][1] << std::endl;
-	}
+	// for (int i = 0; i < count_objects; i++) {
+	// 	std::cout << "Object(" << i << "): y (row) = " << centroids[i][0] << ", x (col) = " << centroids[i][1] << std::endl;
+	// }
 
 	// assign UNIQUE color to each object
 	Mat associate_img = Mat::zeros( bw_img.size(), CV_8UC3 ); // function will return this image
@@ -399,6 +410,42 @@ Mat ImageConverter::associateObjects(Mat bw_img)
 	return associate_img;
 }
 
+void camera_cal(int row, int col, double * ret) {
+	const double height = 480; const int width = 640;
+	const double orig_r = height / 2;
+ 	const double orig_c = width / 2;
+
+ 	const double beta = 744;
+// may need to change a bit 	
+    const double theta= .0233;
+//guess n chech    
+    const double tx=0.231247;
+    const double ty=-0.06213;
+    double xc, yc, xw, yw;
+
+
+	xc=-1*(col-orig_c)/beta;
+	yc=-1*(row-orig_r)/beta;
+
+	cout << "xc: " << xc << ", yc: " << yc << endl;
+
+	// xw=cos(theta)*xc+sin(theta)*yc-tx*cos(theta)-ty*sin(theta);
+	// yw=-sin(theta)*xc+cos(theta)*yc+tx*sin(theta)-ty*cos(theta);
+
+	// cout << xw << ", " << yw << endl;
+
+	xw = xc + tx;
+	yw = yc + ty;
+	cout << "xw: " << xw << ", yw: " << yw << endl;
+
+	ret[0] = xw;
+	ret[1] = yw;
+}
+
+
+
+
+
 /*****************************************************
 	*Function for Lab 6
  * **************************************************/
@@ -409,10 +456,14 @@ Mat ImageConverter::associateObjects(Mat bw_img)
  //lab4 and lab3 functions can be used since it is included in the "lab4.h" 
 void onMouse(int event, int x, int y, int flags, void* userdata)
 {
+		//cout << "here" << endl;
 		ic_ptr->onClick(event,x,y,flags,userdata);
+
 }
 void ImageConverter::onClick(int event,int x, int y, int flags, void* userdata)
 {
+	double world[2];
+	ur_msgs::SetIO srv;
 	// For use with Lab 6
 	// If the robot is holding a block, place it at the designated row and column. 
 	if  ( event == EVENT_LBUTTONDOWN ) //if left click, do nothing other than printing the clicked point
@@ -422,7 +473,75 @@ void ImageConverter::onClick(int event,int x, int y, int flags, void* userdata)
 			ROS_INFO_STREAM("left click:  (" << x << ", " << y << ")");  //the point you clicked
 
 			// put your left click code here
+			camera_cal(x, y, world);
 
+			driver_msg.destination=lab_invk(world[0],world[1],0.022,-90);
+
+			//publish the point to the robot
+		    ros::Rate loop_rate(SPIN_RATE); // Initialize the rate to publish to ur3/command
+			int spincount = 0;
+			driver_msg.duration = 3.0;
+			pub_command.publish(driver_msg);  // publish command, but note that is possible that
+												  // the subscriber will not receive this message.
+			spincount = 0;
+			while (isReady) { // Waiting for isReady to be false meaning that the driver has the new command
+				ros::spinOnce();  // Allow other ROS functionallity to run
+				loop_rate.sleep(); // Sleep and wake up at 1/20 second (1/SPIN_RATE) interval
+				if (spincount > SPIN_RATE) {  // if isReady does not get set within 1 second re-publish
+					pub_command.publish(driver_msg);
+					ROS_INFO_STREAM("Just Published again driver_msg");
+					spincount = 0;
+				}
+				spincount++;  // keep track of loop count
+			}
+			ROS_INFO_STREAM("waiting for rdy");  // Now wait for robot arm to reach the commanded waypoint.
+			
+			while(!isReady)
+			{
+				ros::spinOnce();
+				loop_rate.sleep();
+			}
+			ROS_INFO_STREAM("Ready for new point");
+
+			suction(this->srv_SetIO, srv, 1.0);
+			int err_count = 0;
+			while(!SuctionValue)
+			{
+				ros::spinOnce();
+				loop_rate.sleep();
+				err_count++;
+				if (err_count > 50){
+				  suction(srv_SetIO, srv, 0.0);
+				  ROS_ERROR("NO BLOCK FOUND");
+				  ros::spin();
+				}
+			}		
+
+			driver_msg.destination=lab_invk(world[0],world[1],0.07,-90);
+
+			//publish the point to the robot
+			driver_msg.duration = 3.0;
+			pub_command.publish(driver_msg);  // publish command, but note that is possible that
+												  // the subscriber will not receive this message.
+			spincount = 0;
+			while (isReady) { // Waiting for isReady to be false meaning that the driver has the new command
+				ros::spinOnce();  // Allow other ROS functionallity to run
+				loop_rate.sleep(); // Sleep and wake up at 1/20 second (1/SPIN_RATE) interval
+				if (spincount > SPIN_RATE) {  // if isReady does not get set within 1 second re-publish
+					pub_command.publish(driver_msg);
+					ROS_INFO_STREAM("Just Published again driver_msg");
+					spincount = 0;
+				}
+				spincount++;  // keep track of loop count
+			}
+			ROS_INFO_STREAM("waiting for rdy");  // Now wait for robot arm to reach the commanded waypoint.
+			
+			while(!isReady)
+			{
+				ros::spinOnce();
+				loop_rate.sleep();
+			}
+			ROS_INFO_STREAM("Ready for new point");
 
 			leftclickdone = 1; // code finished
 		} else {
@@ -436,8 +555,63 @@ void ImageConverter::onClick(int event,int x, int y, int flags, void* userdata)
 			ROS_INFO_STREAM("right click:  (" << x << ", " << y << ")");  //the point you clicked
 
 			// put your right click code here
+			camera_cal(x, y, world);
 
+			driver_msg.destination=lab_invk(world[0],world[1],0.022,-90);
 
+			//publish the point to the robot
+		    ros::Rate loop_rate(SPIN_RATE); // Initialize the rate to publish to ur3/command
+			int spincount = 0;
+			driver_msg.duration = 3.0;
+			pub_command.publish(driver_msg);  // publish command, but note that is possible that
+												  // the subscriber will not receive this message.
+			spincount = 0;
+			while (isReady) { // Waiting for isReady to be false meaning that the driver has the new command
+				ros::spinOnce();  // Allow other ROS functionallity to run
+				loop_rate.sleep(); // Sleep and wake up at 1/20 second (1/SPIN_RATE) interval
+				if (spincount > SPIN_RATE) {  // if isReady does not get set within 1 second re-publish
+					pub_command.publish(driver_msg);
+					ROS_INFO_STREAM("Just Published again driver_msg");
+					spincount = 0;
+				}
+				spincount++;  // keep track of loop count
+			}
+			ROS_INFO_STREAM("waiting for rdy");  // Now wait for robot arm to reach the commanded waypoint.
+			
+			while(!isReady)
+			{
+				ros::spinOnce();
+				loop_rate.sleep();
+			}
+			ROS_INFO_STREAM("Ready for new point");
+
+			suction(this->srv_SetIO, srv, 0.0);
+			
+			driver_msg.destination=lab_invk(world[0],world[1],0.07,-90);
+
+			//publish the point to the robot
+			driver_msg.duration = 3.0;
+			pub_command.publish(driver_msg);  // publish command, but note that is possible that
+												  // the subscriber will not receive this message.
+			spincount = 0;
+			while (isReady) { // Waiting for isReady to be false meaning that the driver has the new command
+				ros::spinOnce();  // Allow other ROS functionallity to run
+				loop_rate.sleep(); // Sleep and wake up at 1/20 second (1/SPIN_RATE) interval
+				if (spincount > SPIN_RATE) {  // if isReady does not get set within 1 second re-publish
+					pub_command.publish(driver_msg);
+					ROS_INFO_STREAM("Just Published again driver_msg");
+					spincount = 0;
+				}
+				spincount++;  // keep track of loop count
+			}
+			ROS_INFO_STREAM("waiting for rdy");  // Now wait for robot arm to reach the commanded waypoint.
+			
+			while(!isReady)
+			{
+				ros::spinOnce();
+				loop_rate.sleep();
+			}
+			ROS_INFO_STREAM("Ready for new point");
 
 			rightclickdone = 1; // code finished
 		} else {
@@ -446,12 +620,6 @@ void ImageConverter::onClick(int event,int x, int y, int flags, void* userdata)
 	}
 }
 
-// void camera_cal(int row, int col) {
-// 	const int height = 480; const int width = 640;
-// 	const int orig_r = height / 2;
-// 	const int orig_c = width / 2;
 
-// 	const double beta = 699.64;
-	
 
 // }
